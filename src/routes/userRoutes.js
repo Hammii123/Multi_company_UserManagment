@@ -3,6 +3,11 @@ import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { getUsers } from "../controllers/userController.js";
+import { authenticate } from "../middleware/authenticateMiddleware.js";
+import { authorize } from "../middleware/roleBaseMiddleware.js";
+import { createUser } from "../controllers/userController.js";
+
+
 
 const router = express.Router();
 
@@ -30,5 +35,13 @@ router.get(
   authorizeRoles("Admin", "Manager"),
   getUsers
 );
+
+router.post(
+  "/",
+  authenticate,
+  authorize("Admin"),
+  createUser
+);
+
 
 export default router;

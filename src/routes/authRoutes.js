@@ -4,6 +4,8 @@ import rateLimit from "express-rate-limit";
 
 import { login } from "../controllers/authController.js";
 import { loginValidator } from "../validators/authValidator.js";
+import { authenticate } from "../middleware/authenticateMiddleware.js";
+import { authorize } from "../middleware/roleBaseMiddleware.js";
 
 const router = express.Router();
 
@@ -16,5 +18,10 @@ const loginLimiter = rateLimit({
 });
 
 router.post("/login", loginLimiter, loginValidator, login);
+
+router.post(
+  "/users",authenticate,authorize("Admin"),createUser
+);
+
 
 export default router;

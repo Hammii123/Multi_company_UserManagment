@@ -4,6 +4,8 @@ import helmet from "helmet";
 import companyRoutes from "./routes/companyRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import { errorMiddleware } from "./middleware/errorMiddleware.js";
+
 
 const app = express();
 
@@ -19,5 +21,7 @@ app.get("/", (req, res) => {
 app.use("/api/companies", companyRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use(errorMiddleware);
+
 
 export default app;
