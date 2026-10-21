@@ -2,22 +2,26 @@
 import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-import { getUsers } from "../controllers/userController.js";
-import { authenticate } from "../middleware/authenticateMiddleware.js";
-import { authorize } from "../middleware/roleBaseMiddleware.js";
-import { createUser } from "../controllers/userController.js";
-
-
+import {
+  createUser,
+  getUsers
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
-router.get("/me", authenticateToken, (req, res) => {
-  res.status(200).json({
-    message: "Authentication successful",
-    user: req.user
-  });
-});
+// Get the currently authenticated user's information
+router.get(
+  "/me",
+  authenticateToken,
+  (req, res) => {
+    res.status(200).json({
+      message: "Authentication successful",
+      user: req.user
+    });
+  }
+);
 
+// Admin-only test endpoint
 router.get(
   "/admin-test",
   authenticateToken,
@@ -29,6 +33,7 @@ router.get(
   }
 );
 
+// Admin and Manager can view users in their own company
 router.get(
   "/",
   authenticateToken,
@@ -36,12 +41,12 @@ router.get(
   getUsers
 );
 
+// Only Admin can create users
 router.post(
   "/",
-  authenticate,
-  authorize("Admin"),
+  authenticateToken,
+  authorizeRoles("Admin"),
   createUser
 );
-
 
 export default router;
