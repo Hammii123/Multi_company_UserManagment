@@ -6,6 +6,7 @@ import {
   createUser,
   getUsers
 } from "../controllers/userController.js";
+import { authenticate } from "../middleware/authenticateMiddleware.js";
 
 const router = express.Router();
 
@@ -48,5 +49,7 @@ router.post(
   authorizeRoles("Admin"),
   createUser
 );
+
+router.put("/:id", authenticateToken, authenticate("Admin"),updateUser);
 
 export default router;
