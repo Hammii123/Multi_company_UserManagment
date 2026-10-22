@@ -43,23 +43,58 @@ export async function createUser(req, res, next) {
 
 export async function getUsers(req, res, next) {
   try {
-    const users = await User.find({
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    );
+
+    const search = req.query.search?.trim();
+
+    const filter = {
       companyId: req.user.companyId,
       isDeleted: false
-    })
-      .select("-password")
-      .sort({ _id: 1 })
-      .limit(100)
-      .lean();
+    };
+
+    if (search) {
+      const escapedSearch = search.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+      filter.$or = [
+        { name: { $regex: escapedSearch, $options: "i" } },
+        { email: { $regex: escapedSearch, $options: "i" } }
+      ];
+    }
+
+    const [users, totalUsers] = await Promise.all([
+      User.find(filter)
+        .select("-password")
+        .sort({ _id: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+
+      User.countDocuments(filter)
+    ]);
 
     return res.status(200).json({
       message: "Users retrieved successfully",
+      pagination: {
+        currentPage: page,
+        limit,
+        totalUsers,
+        totalPages: Math.ceil(totalUsers / limit)
+      },
       users
     });
   } catch (error) {
     next(error);
   }
 }
+
+
 
 export async function updateUser(req, res,next){
     try{
@@ -85,10 +120,94 @@ export async function updateUser(req, res,next){
             updates.email = email.trim().toLowerCase();
         }
 
-        if(password !== indefined){
+        if(password !== undefined){
             if( typeof password !== "string" || password.length < 8 || password.length>72) {
                 return res.status(400).json({ error: "Password must be between 8 to 72 characters"});
             }
+            updates.password = await bcrypt.hash(password,12);
         }
+        if (role !==undefined) {
+            if(!["Admin","Manager","Employee"].includes(role)){
+                return res.status(400).json({ error: "invalid role"});
+            }
+            updates.role= role;
+        }
+
+        if(Object.keys(updates).length === 0 ){
+            return res.status(400).json({
+                error:"Provide at least one field to update"
+            });
+        }
+
+        const user = await User.findOneAndUpdate(
+            {
+                _id: id,
+                companyId: req.user.companyId,
+                isDeleted:false
+            },
+            {$set:updates},
+            {
+                new:true,
+                runValidators: true
+
+            }
+        ).select("-password");
+
+        if(!user){
+            return res.status(400).json({
+                error:"User not found in your company", 
+            });
+        }
+
+        return res.status(200).json({
+            message:"User updated successfully", user
+        });
+    }  catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                error:"Invalid user ID"
+            });
+        }
+        next(error);
+    }
+}
+
+export async function deleteUser(req,res, next) {
+    try{
+     const {id}  = req.params;
+
+     const user = await User.findOneAndUpdate(
+        {
+            _id:id,
+            companyId:req.user.companyId,
+            isDeleted:false
+        },
+        {
+            $set: { isDeleted: true}
+        } , 
+        {
+            new: true
+        },
+
+     ).select("-password");
+
+     if(!user){
+        return res.status(404).json({
+            error:"User not found in your company"
+        });
+     }
+     return res.status(200).json({
+        message:"User deleted successfully", user
+     });
+    } catch (error) {
+
+        if(error.name === "CastError") {
+            return res.status(400).json({
+                error:"Invalid user ID"
+            });
+        }
+
+        next(error);
+
     }
 }
