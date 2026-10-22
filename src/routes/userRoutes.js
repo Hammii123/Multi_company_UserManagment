@@ -4,7 +4,10 @@ import { authenticateToken } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 import { createUser,getUsers,updateUser,deleteUser } from "../controllers/userController.js";
-
+import {
+  createUserValidator,
+  handleValidationErrors
+} from "../middleware/userValidator.js";
 
 
 const router = express.Router();
@@ -46,6 +49,8 @@ router.post(
   "/",
   authenticateToken,
   authorizeRoles("Admin"),
+  createUserValidator,
+  handleValidationErrors,
   createUser
 );
 

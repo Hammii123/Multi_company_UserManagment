@@ -41,6 +41,9 @@ export async function createUser(req, res, next) {
   }
 }
 
+
+
+
 export async function getUsers(req, res, next) {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -55,6 +58,18 @@ export async function getUsers(req, res, next) {
       companyId: req.user.companyId,
       isDeleted: false
     };
+
+    const {role} = req.query;
+
+    if(role){
+        if(!["Admin","Manager","Employee"].includes(role)){
+            return res.status(400).json({
+                error:"Invalid role filter"
+            });
+        }
+        filter.role = role;
+    }
+
 
     if (search) {
       const escapedSearch = search.replace(
